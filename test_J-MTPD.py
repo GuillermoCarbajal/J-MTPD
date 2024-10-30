@@ -1,42 +1,31 @@
 import torch
 from skimage.io import imread
 from skimage.transform import rescale
-from utils_bd.homographies import compute_intrinsics, generarK, mostrar_kernels, generate_video, get_offsets_from_positions, \
-                                     show_positions_found, sort_positions, save_kernels_from_offsets, show_kernels_from_offsets_on_blurry_image
+from utils.homographies import compute_intrinsics, generate_video, get_offsets_from_positions, \
+                                     save_kernels_from_offsets, show_kernels_from_offsets_on_blurry_image
 import numpy as np
-from utils_bd.RL_restoration_from_positions import RL_restore_from_positions, combined_RL_restore_from_positions
-from models.network_nimbusr_pmbm import NIMBUSR_PMBM as net
+#from models.network_nimbusr_pmbm import NIMBUSR_PMBM as net
 from models.network_nimbusr_offsets import NIMBUSR_Offsets as net_nimbusr_offsets
 
-from utils_bd.visualization import save_image, tensor2im, save_kernels_grid, save_video
+from utils.visualization import save_image, tensor2im, save_video, sort_positions, show_positions_found
 import os 
 import argparse
 from models.CameraShakeModelTwoBranches import CameraShakeModelTwoBranches as TwoBranches
-from models.CameraShakeModelThreeBranches import CameraShakeModelThreeBranches as ThreeBranches
 import json
 from PIL import Image
 import cv2
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--blurry_image', '-b', type=str, help='blurry image', default='/home/guillermo/github/camera_shake/data/COCO_homographies_small_gf1/blurry/000000000009_0.jpg')
+parser.add_argument('--blurry_image', '-b', type=str, help='blurry image', default='./testing_imgs/manmade_01_gyro_01.png')
 parser.add_argument('--reblur_model', '-m', type=str, help='reblur model', required=True)
 parser.add_argument('--restoration_network', '-rn', type=str, help='restoration network', default=r'NIMBUSR/model_zoo/PMPB_220000_G.pth')
 parser.add_argument('--rescale_factor','-rf', type=float, default=1)
 parser.add_argument('--restoration_method','-rm', type=str, default='NIMBUSR')
 parser.add_argument('--nimbusr_model_type','-nmt', type=str, default='offsets')
-parser.add_argument('--output_folder','-o', type=str, default='results_blind_pmpb')
+parser.add_argument('--output_folder','-o', type=str, default='results_J-MTPD')
 parser.add_argument('--architecture','-a', type=str, default='two_branches')
-parser.add_argument('--crop', action='store_true', default=False, help='whether to compute the kernels from central crop')
-parser.add_argument('--crop_size','-cs', type=int, default=160)
-parser.add_argument('--scale_pitch_yaw', action='store_true', help='whether to scale the pitch and yaw', default=False)
-parser.add_argument('--scale_roll', action='store_true', help='whether to scale the roll', default=False)
-parser.add_argument('--superresolution_factor','-sf', type=int, default=1)
 parser.add_argument('--save_video', action='store_true', help='whether to save the video or not', default=False)
-parser.add_argument('--bordersize', type=int, default=32)
-parser.add_argument('--convolution', action='store_true', help='whether to flip the offsets before inputing to netG', default=False)
 parser.add_argument('--focal_length', '-f', type=float, help='given focal length', default=0)
-parser.add_argument('--given_focal_length', action='store_true', help='whether to use the focal length in the forward pass', default=False)
-parser.add_argument('--offsets_BT', action='store_true', help='whether to pass offsets computed from the adjunct operator to the restorer', default=False)
 
 args = parser.parse_args()
 
@@ -148,42 +137,22 @@ for blurry_image_filename in blurry_images_list:
 
     
     with torch.no_grad():
-        if args.crop:
-            camera_positions = camera_model(blurry_tensor[:,:,H//2-args.crop_size//2:H//2+args.crop_size//2, 
-                                                          W//2-args.crop_size//2:W//2+args.crop_size//2] - 0.5)
-        else:
-            if args.architecture == 'two_branches':
+        if args.architecture == 'two_branches':
 
-                if args.focal_length > 0:
-                    f = torch.Tensor([args.focal_length]).to(blurry_tensor.device)
-                    #f = torch.Tensor([float(max(H,W))]).to(tensor_img.device) 
-                    intrinsics = torch.Tensor([[f, 0, W/2],[0, f, H/2], [0, 0, 1] ]).cuda(blurry_tensor.device)
-                    intrinsics = intrinsics[None,:,:]
-                else:
-                    intrinsics = compute_intrinsics(W,H).cuda(GPU)[None]
-                    f =  torch.Tensor([max(H,W)]).to(blurry_tensor.device)
-                    
-                    #focal_channel = f/maximo * torch.ones(N,1,H,W).to(tensor_img.device)
-                    #cam_input = torch.concat((focal_channel, tensor_img), dim=1)
-
-                if args.given_focal_length:
-                     camera_positions = camera_model(blurry_tensor - 0.5,f)
-                else:
-                    camera_positions = camera_model(blurry_tensor - 0.5)
-
-            elif args.architecture == 'three_branches':
-                camera_positions, intrinsics =  camera_model(blurry_tensor - 0.5)
-                #intrinsics[0,0,0]=W
-                #intrinsics[0,1,1]=H
+            if args.focal_length > 0:
+                f = torch.Tensor([args.focal_length]).to(blurry_tensor.device)
+		#f = torch.Tensor([float(max(H,W))]).to(tensor_img.device) 
+                intrinsics = torch.Tensor([[f, 0, W/2],[0, f, H/2], [0, 0, 1] ]).cuda(blurry_tensor.device)
+                intrinsics = intrinsics[None,:,:]
+            else:
+                intrinsics = compute_intrinsics(W,H).cuda(GPU)[None]
+                f =  torch.Tensor([max(H,W)]).to(blurry_tensor.device)
+            
+            camera_positions = camera_model(blurry_tensor - 0.5,f)
+	
 
 
-            #camera_positions[:,:,0]=camera_positions[:,:,0]*(W/360)
-            #camera_positions[:,:,1]=camera_positions[:,:,1]*(H/360)
-        if args.scale_pitch_yaw:
-            camera_positions[:,:,0] = camera_positions[:,:,0]/W
-            camera_positions[:,:,1] = camera_positions[:,:,1]/H
-        if args.scale_roll:
-            camera_positions[:,:,2]=camera_positions[:,:,2]/np.sqrt(H*H+W*W)   
+
 
     #camera_positions = torch.from_numpy(camera_positions_np).cuda(GPU)[None].float()
     
@@ -204,15 +173,6 @@ for blurry_image_filename in blurry_images_list:
                 offsets = get_offsets_from_positions(blurry_tensor.shape, camera_positions, intrinsics)
                 offsets = offsets.reshape(1,2*n_positions, H,W)
                 offsets_BT=None
-                if args.offsets_BT:
-                    offsets_BT = get_offsets_from_positions(blurry_tensor.shape, camera_positions, intrinsics, adjunct_operator_offsets=True)
-                    offsets_BT = offsets_BT.reshape(1,2*n_positions, H,W)
-
-                #if args.convolution:
-                #    netG_input = -offsets   
-                #else:
-                #    netG_input = offsets 
-
                 output = netG(blurry_tensor, offsets, 1, sigma=noise_level[None,:], offsets_BT=offsets_BT)
         
 
@@ -226,8 +186,8 @@ for blurry_image_filename in blurry_images_list:
     pose = np.zeros((found_positions_np.shape[0], 6))
     pose[:, 3:] = found_positions_np
     
-    K, _ = generarK((H,W,C), pose, A=intrinsics[0].detach().cpu().numpy())
-    kernels_estimated = mostrar_kernels(K, (H,W,C), output_name = os.path.join(output_folder, img_name + '_kernels_found.png' ))
+    #K, _ = generarK((H,W,C), pose, A=intrinsics[0].detach().cpu().numpy())
+    #kernels_estimated = mostrar_kernels(K, (H,W,C), output_name = os.path.join(output_folder, img_name + '_kernels_found.png' ))
 
     show_kernels_from_offsets_on_blurry_image(blurry_tensor[0],offsets[0].reshape(n_positions,2,H,W), os.path.join(output_folder, img_name + '_kernels.png' ))
     
@@ -240,9 +200,6 @@ for blurry_image_filename in blurry_images_list:
     save_image(reblurred, os.path.join(output_folder, img_name + '_reblurred.png' ))
 
     show_positions_found(found_positions_np, intrinsics[0,0,0].detach().cpu().numpy(), os.path.join(output_folder, img_name + '_positions_found.png'))
-    if args.offsets_BT:
-        save_kernels_from_offsets(offsets_BT,os.path.join(output_folder, img_name + '_kernels_BT.png' ))
-        save_kernels_from_offsets(-offsets,os.path.join(output_folder, img_name + '_kernels_neg.png' ))
 
  
     
@@ -251,26 +208,4 @@ for blurry_image_filename in blurry_images_list:
         output_video = os.path.join(output_folder, img_name + '.avi')
         save_video(frames, output_video)
         
-        # cv_images=[]
-        # position = (W-100, 50)
-        # font = cv2.FONT_HERSHEY_SIMPLEX
-        # font_scale = 1.5
-        # color = (0, 255, 0)
-        # thickness = 2
-        # #blurry_to_draw = cv2.cvtColor((255*blurry_image).astype(np.uint8), cv2.COLOR_RGB2BGR)
-        # #blurry_to_draw = cv2.putText(cv2.UMat(blurry_to_draw), 'Blurry', position, font, font_scale, color, thickness)
-        # #cv_images.append(blurry_to_draw)
-        # for n in range(len(frames)):
-        #     sharp_n = tensor2im(torch.clamp(frames[n][0].detach(),0,1) - 0.5)
-        #     sharp_n_draw = cv2.putText(cv2.UMat(sharp_n), str(n), position, font, font_scale, color, thickness)
-        #     #imgs.append(Image.fromarray(np.uint8(sharp_n)).convert("P",palette=Image.ADAPTIVE))
-        #     cv_images.append(cv2.cvtColor(sharp_n_draw, cv2.COLOR_RGB2BGR))
-        #     #save_image(sharp_n, os.path.join(output_folder, img_name + f'_{n}.png' ))
-        
-        # #imgs[0].save(fp=os.path.join(output_folder, img_name + '.gif'), format='GIF', append_images=imgs,
-        # #         save_all=True, duration=30, loop=0)
-    
-        # video = cv2.VideoWriter(os.path.join(output_folder, img_name + '.avi'), cv2.VideoWriter_fourcc(*'MJPG'), 25, (W,H))
-        # for image in cv_images:
-        #     video.write(image)
         
