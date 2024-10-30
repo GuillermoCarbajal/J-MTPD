@@ -5,7 +5,7 @@ Official Pytorch Implementation  of *J-MTPD*.
 
 ## Trajectory Prediction Network Architecture
 <p align="center">
-<img width="900" src="imgs/architecture.png?raw=true">
+<img width="900" src="imgs/two_branches.png?raw=true">
   </p>
   
 ## Quick Demo
