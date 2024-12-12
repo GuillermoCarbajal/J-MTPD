@@ -1,39 +1,33 @@
-# J-MKPD
+# J-MTPD
 
-Official Pytorch Implementation  of *Blind Motion Deblurring with Pixel-Wise Kernel
-Estimation via Kernel Prediction Networks*. 
+Official Pytorch Implementation  of *J-MTPD*. 
+ 
 
-This [article](https://iie.fing.edu.uy/~carbajal/TCI/J-MKPD.pdf) was submitted to IEEE Transactions On Computational Imaging. [Supp. Material](https://iie.fing.edu.uy/~carbajal/TCI/J-MKPD_supp_mat.pdf)  
-The proposed motion deblurring method demonstrates strong generalization capabilities, delivering sharp image restorations on real-world photographs. In certain instances, it even surpasses the sharpness of the ground-truth images. It is worth noting that the conventional quality metric PSNR tends to favor blurred outputs. Thus, an increase in PSNR can be achieved by blurring the restoration. In contrast, employing metrics designed to gauge image sharpness, such as CPBD, aligns more closely with our perception of sharpness and offers a better assessment of the restoration quality.
+## Trajectory Prediction Network Architecture
 <p align="center">
-<img width="700" src="imgs/realblur_results.png?raw=true">
-</p>
-
-## Kernels Prediction Network Architecture
-<p align="center">
-<img width="900" src="imgs/architecture.png?raw=true">
+<img width="900" src="imgs/two_branches.png?raw=true">
   </p>
   
 ## Quick Demo
 
 
-* <a href="https://colab.research.google.com/github/GuillermoCarbajal/J-MKPD/blob/main/J-MKPD_demo.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+* <a href="https://colab.research.google.com/github/GuillermoCarbajal/J-MTPD/blob/main/J-MTPD_demo.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
 ## Installation
 ### Clone Repository
 ```
-git clone https://github.com/GuillermoCarbajal/J-MKPD.git
+git clone https://github.com/GuillermoCarbajal/J-MTPD.git
 ```
 
 
 ### Download deblurring models
 
-[Kernels Prediction Model](https://iie.fing.edu.uy/~carbajal/IEEE_CI_models/COCO900_restL2_aug_all_loss/80000_kernels_network.pth)           
-[Restoration Network](https://iie.fing.edu.uy/~carbajal/IEEE_CI_models/COCO900_restL2_aug_all_loss/80000_G.pth)
+[Kernels Prediction Model](https://iie.fing.edu.uy/~carbajal/J-MTPD/camera_shake_epoch25_epoch35_epoch50_epoch10_epoch5_epoch25_epoch25_epoch25_epoch27_epoch24_epoch4_epoch10_epoch22_epoch23_epoch90.pkl)           
+[Restoration Network](https://iie.fing.edu.uy/~carbajal/J-MTPD/camera_shake_epoch25_epoch35_epoch50_epoch10_epoch5_epoch25_epoch25_epoch25_epoch27_epoch24_epoch4_epoch10_epoch22_epoch23_epoch90_G.pkl)
 
 ### Deblur an image or a list of images
 ```
-python image_deblurring.py -b blurry_img_path --reblur_model reblur_model_path --nimbusr_model restoration_model_path --output_folder results
+python test_J-MTPD.py -b blurry_img_path --reblur_model reblur_model_path --nimbusr_model restoration_model_path --output_folder results
 ```
 
 ### Parameters
