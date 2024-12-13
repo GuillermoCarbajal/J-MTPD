@@ -22,40 +22,22 @@ git clone https://github.com/GuillermoCarbajal/J-MTPD.git
 
 ### Download deblurring models
 
-[Kernels Prediction Model](https://iie.fing.edu.uy/~carbajal/J-MTPD/camera_shake_epoch25_epoch35_epoch50_epoch10_epoch5_epoch25_epoch25_epoch25_epoch27_epoch24_epoch4_epoch10_epoch22_epoch23_epoch90.pkl)           
+[Trajectory Prediction Network](https://iie.fing.edu.uy/~carbajal/J-MTPD/camera_shake_epoch25_epoch35_epoch50_epoch10_epoch5_epoch25_epoch25_epoch25_epoch27_epoch24_epoch4_epoch10_epoch22_epoch23_epoch90.pkl)           
 [Restoration Network](https://iie.fing.edu.uy/~carbajal/J-MTPD/camera_shake_epoch25_epoch35_epoch50_epoch10_epoch5_epoch25_epoch25_epoch25_epoch27_epoch24_epoch4_epoch10_epoch22_epoch23_epoch90_G.pkl)
 
 ### Deblur an image or a list of images
 ```
-python test_J-MTPD.py -b blurry_img_path --reblur_model reblur_model_path --nimbusr_model restoration_model_path --output_folder results
+python test_J-MTPD.py -b blurry_img_path --reblur_model reblur_model_path --restoration_network restoration_model_path --output_folder results
 ```
 
 ### Parameters
 Additional options:   
-  `--blurry_images`: may be a singe image path or a .txt with a list of images.
+  `--blurry_image`: may be a singe image path or a .txt with a list of images.
   
   `--resize_factor`: input image resize factor (default 1)     
   
-  `--gamma_factor`: gamma correction factor. By default is assummed `gamma_factor=2.2`. For Kohler dataset images `gamma_factor=1.0`.
+  `--focal_length`: given focal length. By default is assummed f=max(H,W). For Kohler dataset images `f=3900`.
   
-
-
-### Compute kernels from an image
-
-```
-python compute_kernels.py -i image_path -m kernels_prediction_model_path
-```
-Our method generalize better to datasets not seen during training. Other methods motion fields are correlated with the image structure, suffer from the aperture problem and predict deltas on low variance regions.
-<p align="center">
-<img width="900" src="imgs/kernels_Kohler.png?raw=true">
-  </p>
-
-
-### Saturated images examples
-
-[Kernels Prediction Model (light streaks)](https://iie.fing.edu.uy/~carbajal/IEEE_CI_models/COCO900_restL2_sat_streaks/80000_kernels_network.pth)           
-[Restoration Network (light streaks)](https://iie.fing.edu.uy/~carbajal/IEEE_CI_models/COCO900_restL2_sat_streaks/80000_G.pth)
-
 
 <p align="center">
 <img width="900" src="imgs/sat_images_examples.png?raw=true">
