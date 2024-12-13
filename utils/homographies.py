@@ -107,15 +107,15 @@ def reblur_offsets(sharp, offsets, forward=True, mask=None) :
     #kh, kw = 5,5   # we have 25 offsets
     
     if kw==5:
-        p = initial_offset_5x5().cuda()
+        p = initial_offset_5x5().to(offsets.device)
     elif kw==7:
-        p = initial_offset_7x7().cuda()
+        p = initial_offset_7x7().to(offsets.device)
     else:
         print('offsets could not be initialized, please check dimensions. offsets input must be n_positions x 2 x H x W')
     
 
    
-    weight = torch.ones((C,1,kh, kw)).cuda()/(kh*kw)
+    weight = torch.ones((C,1,kh, kw)).to(offsets.device)/(kh*kw)
     #weight = torch.zeros((C,1,kh, kw)).cuda()
     #weight[:,0,4,4]=1
     #mask = torch.ones(1, kh * kw, H, W).cuda()
@@ -266,19 +266,19 @@ def save_kernels_from_offsets(offsets,  output_name):
     
     if kh==5:
         off0 = initial_offset_5x5()
-        p = torch.reshape(off0,(1,2*kh*kw,1,1)).cuda()
+        p = torch.reshape(off0,(1,2*kh*kw,1,1)).to(offsets.device)
     elif kh==7:
         off0=initial_offset_7x7()
-        p = torch.reshape(off0,(1,2*kh*kw,1,1)).cuda()
+        p = torch.reshape(off0,(1,2*kh*kw,1,1)).to(offsets.device)
     else:
         print('offsets could not be initialized, check dimensions. Input must be n_positions x 2 x H x W')
         return
     
     C=3
-    weight = torch.ones((C,1,kh, kw)).cuda()/(kh*kw)
+    weight = torch.ones((C,1,kh, kw)).to(offsets.device)/(kh*kw)
 
     offsets = torch.reshape(offsets,(1,2*kh*kw,H,W))
-    a = torch.zeros(1,1,H,W).cuda()
+    a = torch.zeros(1,1,H,W).to(offsets.device)
     a[:,:,32::65,32::65] = 1.0
     kernel_field = deform_conv2d(a, offsets-p, weight, padding=weight.shape[-1]//2)
     kernel_field = kernel_field[0].permute(1,2,0).detach().cpu().numpy()
@@ -310,19 +310,19 @@ def show_kernels_from_offsets_on_blurry_image(blurry, offsets,  output_name):
     
     if kh==5:
         off0 = initial_offset_5x5()
-        p = torch.reshape(off0,(1,2*kh*kw,1,1)).cuda()
+        p = torch.reshape(off0,(1,2*kh*kw,1,1)).to(offsets.device)
     elif kh==7:
         off0=initial_offset_7x7()
-        p = torch.reshape(off0,(1,2*kh*kw,1,1)).cuda()
+        p = torch.reshape(off0,(1,2*kh*kw,1,1)).to(offsets.device)
     else:
         print('offsets could not be initialized, check dimensions. Input must be n_positions x 2 x H x W')
         return
     
     C=3
-    weight = torch.ones((C,1,kh, kw)).cuda()/(kh*kw)
+    weight = torch.ones((C,1,kh, kw)).to(offsets.device)/(kh*kw)
 
     offsets = torch.reshape(offsets,(1,2*kh*kw,H,W))
-    a = torch.zeros(1,1,H,W).cuda()
+    a = torch.zeros(1,1,H,W).to(offsets.device)
     step = 33 if torch.max(abs(offsets)) < 33 else 65
     #a[:,:,32::65,32::65] = 1.0
     a[:,:,33::step,33::step] = 1.0
