@@ -23,7 +23,6 @@ parser.add_argument('--rescale_factor','-rf', type=float, default=1)
 parser.add_argument('--restoration_method','-rm', type=str, default='NIMBUSR')
 parser.add_argument('--nimbusr_model_type','-nmt', type=str, default='offsets')
 parser.add_argument('--output_folder','-o', type=str, default='results_J-MTPD')
-parser.add_argument('--architecture','-a', type=str, default='two_branches')
 parser.add_argument('--save_video', action='store_true', help='whether to save the video or not', default=False)
 parser.add_argument('--focal_length', '-f', type=float, help='given focal length', default=0)
 
@@ -90,13 +89,12 @@ else:
     blurry_images_list = [args.blurry_image]
     
 
-if args.restoration_method=='NIMBUSR':
-    netG = load_nimbusr_net(args.nimbusr_model_type)
-    netG.eval()
-    noise_level = 0.01
-    noise_level = torch.FloatTensor([noise_level]).view(1,1,1).cuda(GPU)  
-elif args.restoration_method=='RL':
-    n_iters = 20   
+
+netG = load_nimbusr_net(args.nimbusr_model_type)
+netG.eval()
+noise_level = 0.01
+noise_level = torch.FloatTensor([noise_level]).view(1,1,1).cuda(GPU)  
+  
 
 reblur_model = args.reblur_model 
 #sharp_image_filename = '/home/guillermo/github/camera_shake/data/COCO_homographies_small_gf1//sharp/000000000009_0.jpg'
@@ -112,11 +110,8 @@ with open(os.path.join(args.output_folder, 'args.txt'), 'w') as f:
     json.dump(args.__dict__, f, indent=2)
 
 
-if args.architecture == 'two_branches':
-    #intrinsics = compute_intrinsics(W*args.superresolution_factor, H*args.superresolution_factor, args.bordersize).cuda(GPU)[None]
-    camera_model = TwoBranches().cuda(GPU)
-elif args.architecture == 'three_branches':
-    camera_model = ThreeBranches().cuda(GPU)
+
+camera_model = TwoBranches().cuda(GPU)
 
 state_dict = torch.load(reblur_model)
 camera_model.load_state_dict(state_dict, strict=False)
@@ -137,18 +132,17 @@ for blurry_image_filename in blurry_images_list:
 
     
     with torch.no_grad():
-        if args.architecture == 'two_branches':
-
-            if args.focal_length > 0:
-                f = torch.Tensor([args.focal_length]).to(blurry_tensor.device)
-		#f = torch.Tensor([float(max(H,W))]).to(tensor_img.device) 
-                intrinsics = torch.Tensor([[f, 0, W/2],[0, f, H/2], [0, 0, 1] ]).cuda(blurry_tensor.device)
-                intrinsics = intrinsics[None,:,:]
-            else:
-                intrinsics = compute_intrinsics(W,H).cuda(GPU)[None]
-                f =  torch.Tensor([max(H,W)]).to(blurry_tensor.device)
+        
+        if args.focal_length > 0:
+            f = torch.Tensor([args.focal_length]).to(blurry_tensor.device)
+	    #f = torch.Tensor([float(max(H,W))]).to(tensor_img.device) 
+            intrinsics = torch.Tensor([[f, 0, W/2],[0, f, H/2], [0, 0, 1] ]).cuda(blurry_tensor.device)
+            intrinsics = intrinsics[None,:,:]
+        else:
+            intrinsics = compute_intrinsics(W,H).cuda(GPU)[None]
+            f =  torch.Tensor([max(H,W)]).to(blurry_tensor.device)
             
-            camera_positions = camera_model(blurry_tensor - 0.5,f)
+        camera_positions = camera_model(blurry_tensor - 0.5,f)
 	
 
 
